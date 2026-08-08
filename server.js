@@ -66,6 +66,45 @@ app.post('/tasks', (req, res) => {
     res.status(201).json(task);
 });
 
+app.put('/tasks/:id', (req, res) => {
+    const { title, done } = req.body;
+
+    const task = db
+        .prepare('SELECT * FROM tasks WHERE id = ?')
+        .get(req.params.id);
+
+    if (!task) {
+        return res.status(404).json({ error: 'Task not found' });
+    }
+
+    const updatedTitle = title !== undefined ? title : task.title;
+    const updatedDone = done !== undefined ? done : task.done;
+
+    db.prepare(`
+        UPDATE tasks
+        SET title = ?, done = ?
+        WHERE id = ?
+    `).run(updatedTitle, updatedDone, req.params.id);
+
+    const updatedTask = db
+        .prepare('SELECT * FROM tasks WHERE id = ?')
+        .get(req.params.id);
+
+    res.json(updatedTask);
+});
+
+app.delete('/tasks/:id', (req, res) => {
+    const result = db
+        .prepare('DELETE FROM tasks WHERE id = ?')
+        .run(req.params.id);
+
+    if (result.changes === 0) {
+        return res.status(404).json({ error: 'Task not found' });
+    }
+
+    res.json({ message: 'Task deleted' });
+});
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
